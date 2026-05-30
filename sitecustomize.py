@@ -1,0 +1,11 @@
+"""Make the local src-layout package importable from repo-root commands."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+SRC = Path(__file__).resolve().parent / "src"
+if SRC.exists():
+    sys.path.insert(0, str(SRC))
+
