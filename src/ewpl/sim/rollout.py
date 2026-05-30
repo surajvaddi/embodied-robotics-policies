@@ -10,10 +10,13 @@ import numpy as np
 from PIL import Image
 
 from ewpl.data.schemas import Action
+from ewpl.sim.libero_env import LiberoEnv
 from ewpl.sim.robocasa_env import RoboCasaEnv
 
 
 def make_env(env_name: str):
+    if env_name == "libero":
+        return LiberoEnv()
     if env_name == "robocasa":
         return RoboCasaEnv()
     raise ValueError(f"unsupported rollout env: {env_name}")
@@ -40,7 +43,10 @@ def run_random_rollouts(
         env = make_env(env_name)
         task_id = f"smoke_task_{episode_idx % max(1, tasks):03d}"
         scene_id = f"kitchen_scene_{episode_idx % 3:03d}"
-        observation = env.reset(task_id=task_id, scene_id=scene_id, seed=seed + episode_idx)
+        if env_name == "robocasa":
+            observation = env.reset(task_id=task_id, scene_id=scene_id, seed=seed + episode_idx)
+        else:
+            observation = env.reset(task_id=task_id, seed=seed + episode_idx)
         episode_frames = frames_root / f"episode_{episode_idx:05d}"
         episode_frames.mkdir(parents=True, exist_ok=True)
         Image.fromarray(np.asarray(observation.rgb, dtype=np.uint8)).save(episode_frames / "000000.png")
@@ -75,7 +81,7 @@ def run_random_rollouts(
                 "episode": episode_idx,
                 "env": env_name,
                 "task_id": task_id,
-                "scene_id": scene_id,
+                "scene_id": scene_id if env_name == "robocasa" else "",
                 "steps": steps_taken,
                 "success": success,
                 "total_reward": total_reward,
@@ -91,4 +97,3 @@ def run_random_rollouts(
         writer.writerows(metrics)
 
     return metrics_path, metrics
-

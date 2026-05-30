@@ -14,7 +14,7 @@ from ewpl.sim.rollout import run_random_rollouts
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--env", required=True, choices=["robocasa"])
+    parser.add_argument("--env", required=True, choices=["libero", "robocasa"])
     parser.add_argument("--policy", required=True, choices=["random"])
     parser.add_argument("--tasks", type=int, default=2)
     parser.add_argument("--episodes", type=int, default=5)
@@ -40,4 +40,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

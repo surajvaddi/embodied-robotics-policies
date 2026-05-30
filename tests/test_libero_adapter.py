@@ -7,6 +7,7 @@ import numpy as np
 from ewpl.data.canonical_dataset import CanonicalDataset
 from ewpl.data.libero_adapter import convert_episode, index_tasks, load_libero_config
 from ewpl.data.storage import CanonicalEpisodeStorage
+from ewpl.sim.rollout import run_random_rollouts
 from ewpl.sim.libero_env import LiberoEnv
 
 
@@ -77,3 +78,17 @@ def test_download_libero_dry_run_script(tmp_path) -> None:
     assert "Found LIBERO suite: libero_spatial" in result.stdout
     assert manifest["tasks_indexed"] == 2
 
+
+def test_libero_random_rollout_smoke(tmp_path) -> None:
+    metrics_path, metrics = run_random_rollouts(
+        env_name="libero",
+        tasks=2,
+        episodes=2,
+        out=str(tmp_path / "rollouts"),
+        seed=31,
+        max_steps=6,
+    )
+
+    assert metrics_path.exists()
+    assert len(metrics) == 2
+    assert (tmp_path / "rollouts" / "videos" / "episode_00000" / "000000.png").exists()
