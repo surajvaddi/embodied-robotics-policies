@@ -1,0 +1,15 @@
+source: robocasa
+benchmark: robocasa365
+root: data/raw/robocasa
+seed: 19
+smoke_steps: 18
+tasks:
+  - open_the_top_drawer
+  - close_the_microwave
+  - place_the_mug_in_the_sink
+  - turn_on_the_stove
+scenes:
+  - kitchen_scene_000
+  - kitchen_scene_001
+  - kitchen_scene_002
+
