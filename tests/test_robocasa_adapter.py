@@ -5,7 +5,10 @@ import sys
 import numpy as np
 
 from ewpl.data.robocasa_adapter import index_tasks, load_robocasa_config
+from ewpl.data.robocasa_adapter import convert_episode
+from ewpl.data.canonical_dataset import CanonicalDataset
 from ewpl.data.schemas import Action
+from ewpl.data.storage import CanonicalEpisodeStorage
 from ewpl.sim.robocasa_env import RoboCasaEnv
 
 
@@ -59,3 +62,24 @@ def test_download_robocasa_dry_run_script(tmp_path) -> None:
     assert "RoboCasa tasks indexed: 3" in result.stdout
     assert manifest["tasks_indexed"] == 3
     assert manifest["scene_variations_indexed"] == 3
+
+
+def test_robocasa_episode_conversion_roundtrip(tmp_path) -> None:
+    episode = convert_episode(
+        "open_the_top_drawer",
+        "kitchen_scene_001",
+        episode_idx=0,
+        steps=6,
+        seed=5,
+    )
+    storage = CanonicalEpisodeStorage(tmp_path)
+    storage.save_episode(episode)
+
+    dataset = CanonicalDataset(tmp_path)
+    restored = dataset[0]
+
+    assert restored.source == "robocasa"
+    assert restored.task_id == "open_the_top_drawer"
+    assert restored.metadata["scene_id"] == "kitchen_scene_001"
+    assert len(restored.steps) == 6
+    assert restored.steps[0].observation.rgb.shape == (80, 80, 3)

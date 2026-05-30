@@ -6,6 +6,10 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+import numpy as np
+
+from ewpl.data.schemas import Action, Episode, Step
+from ewpl.sim.robocasa_env import RoboCasaEnv
 from ewpl.sim.robocasa_env import instruction_for_task
 
 
@@ -88,6 +92,96 @@ def write_manifest(manifest: Dict[str, Any], out: Union[str, Path]) -> Path:
     return path
 
 
+def convert_episode(
+    task_id: str,
+    scene_id: str,
+    *,
+    episode_idx: int,
+    benchmark: str = "robocasa365",
+    steps: int = 18,
+    seed: int = 0,
+) -> Episode:
+    """Convert one RoboCasa rollout/demo into the canonical episode schema."""
+
+    env = RoboCasaEnv(benchmark=benchmark)
+    observation = env.reset(task_id=task_id, scene_id=scene_id, seed=seed)
+    episode_steps: List[Step] = []
+    rng = np.random.default_rng(seed)
+
+    for t in range(steps):
+        if t == steps - 1:
+            action_vector = np.zeros(9, dtype=np.float32)
+        else:
+            action_vector = rng.normal(loc=0.0, scale=0.05, size=9).astype(np.float32)
+        action = Action(vector=action_vector, convention="delta_ee_pose_gripper")
+        result = env.step(action) if t < steps - 1 else None
+        done = t == steps - 1
+        episode_steps.append(
+            Step(
+                t=t,
+                observation=observation,
+                action=action,
+                reward=1.0 if done else 0.0,
+                done=done,
+                info={
+                    "benchmark": benchmark,
+                    "task_id": task_id,
+                    "scene_id": scene_id,
+                    "smoke_conversion": True,
+                },
+            )
+        )
+        if result is not None:
+            observation = result.observation
+
+    return Episode(
+        episode_id=f"robocasa_{episode_idx:05d}",
+        source="robocasa",
+        task_id=task_id,
+        instruction=instruction_for_task(task_id),
+        steps=episode_steps,
+        success=True,
+        metadata={
+            "benchmark": benchmark,
+            "scene_id": scene_id,
+            "seed": seed,
+            "conversion": "smoke",
+        },
+    )
+
+
+def convert_to_canonical(
+    config_path: Union[str, Path],
+    out: Union[str, Path],
+    *,
+    limit_episodes: int = 20,
+) -> List[Episode]:
+    config = load_robocasa_config(config_path)
+    manifest = index_tasks(config)
+    tasks = [task["task_id"] for task in manifest["tasks"]]
+    scenes = list(manifest["scenes"])
+    if not tasks:
+        raise ValueError("RoboCasa config did not resolve any tasks")
+    if not scenes:
+        raise ValueError("RoboCasa config did not resolve any scenes")
+
+    episodes = []
+    for idx in range(limit_episodes):
+        task_id = tasks[idx % len(tasks)]
+        scene_id = scenes[idx % len(scenes)]
+        episodes.append(
+            convert_episode(
+                task_id,
+                scene_id,
+                episode_idx=idx,
+                benchmark=str(config.get("benchmark", "robocasa365")),
+                steps=int(config.get("smoke_steps", 18)),
+                seed=int(config.get("seed", 0)) + idx,
+            )
+        )
+    return episodes
+
+
 def _parse_scalar(value: str) -> Any:
     if value.lower() in {"true", "false"}:
         return value.lower() == "true"
@@ -100,4 +194,3 @@ def _parse_scalar(value: str) -> Any:
     except ValueError:
         pass
     return value.strip("\"'")
-
