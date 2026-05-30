@@ -1,0 +1,11 @@
+source: libero
+suite: libero_spatial
+root: data/raw/libero
+seed: 7
+smoke_steps: 16
+tasks:
+  - put_the_bowl_on_the_plate
+  - put_the_mug_on_the_left_plate
+  - pick_up_the_black_bowl
+  - put_the_book_on_the_caddy
+
