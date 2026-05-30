@@ -1,4 +1,5 @@
 import json
+import csv
 import subprocess
 import sys
 
@@ -9,6 +10,7 @@ from ewpl.data.robocasa_adapter import convert_episode
 from ewpl.data.canonical_dataset import CanonicalDataset
 from ewpl.data.schemas import Action
 from ewpl.data.storage import CanonicalEpisodeStorage
+from ewpl.sim.rollout import run_random_rollouts
 from ewpl.sim.robocasa_env import RoboCasaEnv
 
 
@@ -83,3 +85,33 @@ def test_robocasa_episode_conversion_roundtrip(tmp_path) -> None:
     assert restored.metadata["scene_id"] == "kitchen_scene_001"
     assert len(restored.steps) == 6
     assert restored.steps[0].observation.rgb.shape == (80, 80, 3)
+
+
+def test_robocasa_random_rollout_smoke(tmp_path) -> None:
+    metrics_path, metrics = run_random_rollouts(
+        env_name="robocasa",
+        tasks=2,
+        episodes=3,
+        out=str(tmp_path / "rollouts"),
+        seed=23,
+        max_steps=8,
+    )
+
+    assert metrics_path.exists()
+    assert len(metrics) == 3
+    assert (tmp_path / "rollouts" / "videos" / "episode_00000" / "000000.png").exists()
+
+    with metrics_path.open(encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == 3
+    assert set(rows[0]) == {
+        "episode",
+        "env",
+        "task_id",
+        "scene_id",
+        "steps",
+        "success",
+        "total_reward",
+        "done",
+        "mean_action_norm",
+    }
