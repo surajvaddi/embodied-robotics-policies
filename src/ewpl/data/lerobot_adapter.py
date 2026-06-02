@@ -12,6 +12,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Union
 
+import numpy as np
+
+from ewpl.data.schemas import Action, Episode, Observation, Step
+
 
 @dataclass
 class LeRobotConfig:
@@ -109,12 +113,196 @@ def first_present(sample: Dict[str, Any], keys: Sequence[str]) -> Optional[Any]:
     return None
 
 
+def sample_to_step(
+    sample: Dict[str, Any],
+    *,
+    t: int,
+    config: LeRobotConfig,
+    repo_id: str,
+    task_id: Optional[str] = None,
+    instruction: Optional[str] = None,
+    done: bool = False,
+) -> Step:
+    """Normalize one LeRobot sample dictionary into a canonical step."""
+
+    rgb = _normalize_image(first_present(sample, config.image_keys))
+    proprio = _normalize_vector(first_present(sample, config.state_keys), fallback_dim=1)
+    action_vector = _normalize_vector(first_present(sample, config.action_keys), fallback_dim=1)
+    language = _extract_language(sample, fallback=instruction or config.instruction)
+
+    observation = Observation(
+        rgb=rgb,
+        depth=None,
+        proprio=proprio,
+        language=language,
+        camera_intrinsics=None,
+        camera_extrinsics=None,
+        sim_state={
+            "repo_id": repo_id,
+            "task_id": task_id or config.task_id,
+            "frame_index": _scalar(sample.get("frame_index", t)),
+            "episode_index": _scalar(sample.get("episode_index", 0)),
+            "timestamp": _scalar(sample.get("timestamp", t)),
+        },
+    )
+    return Step(
+        t=t,
+        observation=observation,
+        action=Action(vector=action_vector, convention=config.action_convention),
+        reward=_optional_float(sample.get("next.reward", sample.get("reward"))),
+        done=done,
+        info={
+            "source": "lerobot",
+            "repo_id": repo_id,
+            "task_index": _scalar(sample.get("task_index", 0)),
+            "raw_keys": sorted(str(key) for key in sample.keys()),
+        },
+    )
+
+
+def samples_to_episode(
+    samples: Sequence[Dict[str, Any]],
+    *,
+    episode_id: str,
+    config: LeRobotConfig,
+    repo_id: str,
+    source: str = "lerobot",
+    task_id: Optional[str] = None,
+    instruction: Optional[str] = None,
+) -> Episode:
+    """Build one canonical episode from a bounded sequence of LeRobot samples."""
+
+    if not samples:
+        raise ValueError("cannot create an episode from zero samples")
+    resolved_task = task_id or _extract_task_id(samples[0], fallback=config.task_id)
+    resolved_instruction = instruction or _extract_language(samples[0], fallback=config.instruction)
+    steps = [
+        sample_to_step(
+            sample,
+            t=t,
+            config=config,
+            repo_id=repo_id,
+            task_id=resolved_task,
+            instruction=resolved_instruction,
+            done=t == len(samples) - 1,
+        )
+        for t, sample in enumerate(samples)
+    ]
+    return Episode(
+        episode_id=episode_id,
+        source="robocasa" if source == "robocasa" else "lerobot",
+        task_id=resolved_task,
+        instruction=resolved_instruction,
+        steps=steps,
+        success=None,
+        metadata={
+            "backend": config.backend,
+            "repo_id": repo_id,
+            "streaming": config.streaming,
+            "source_family": source,
+            "episode_index": _scalar(samples[0].get("episode_index", 0)),
+        },
+    )
+
+
+def collect_episode_samples(
+    dataset: Any,
+    *,
+    limit_steps: int,
+    episode_index: Optional[int] = None,
+) -> List[Dict[str, Any]]:
+    """Collect a bounded episode-like sample list from a LeRobot dataset iterator."""
+
+    collected: List[Dict[str, Any]] = []
+    selected_episode = episode_index
+    for raw in dataset:
+        sample = dict(raw)
+        sample_episode = _optional_int(sample.get("episode_index"))
+        if selected_episode is None and sample_episode is not None:
+            selected_episode = sample_episode
+        if selected_episode is not None and sample_episode is not None and sample_episode != selected_episode:
+            if collected:
+                break
+            continue
+        collected.append(sample)
+        if len(collected) >= limit_steps:
+            break
+    return collected
+
+
 def _module_has_class(module_name: str, class_name: str) -> bool:
     try:
         module = importlib.import_module(module_name)
     except Exception:
         return False
     return hasattr(module, class_name)
+
+
+def _normalize_image(value: Any) -> np.ndarray:
+    if value is None:
+        return np.zeros((64, 64, 3), dtype=np.uint8)
+    arr = np.asarray(value)
+    if arr.ndim == 2:
+        arr = np.repeat(arr[..., None], repeats=3, axis=-1)
+    if arr.ndim == 3 and arr.shape[0] in {1, 3, 4} and arr.shape[-1] not in {1, 3, 4}:
+        arr = np.moveaxis(arr, 0, -1)
+    if arr.ndim != 3:
+        raise ValueError(f"LeRobot image must normalize to HWC, got shape {arr.shape}")
+    if arr.shape[-1] == 1:
+        arr = np.repeat(arr, repeats=3, axis=-1)
+    if arr.dtype.kind == "f":
+        arr = arr * 255.0 if float(np.nanmax(arr)) <= 1.0 else arr
+    return np.clip(arr[..., :3], 0, 255).astype(np.uint8)
+
+
+def _normalize_vector(value: Any, *, fallback_dim: int) -> np.ndarray:
+    if value is None:
+        return np.zeros(fallback_dim, dtype=np.float32)
+    arr = np.asarray(value, dtype=np.float32)
+    if arr.ndim == 0:
+        arr = arr.reshape(1)
+    return arr.reshape(-1).astype(np.float32)
+
+
+def _extract_language(sample: Dict[str, Any], *, fallback: str) -> str:
+    for key in ("task", "language", "instruction", "episode.task"):
+        value = sample.get(key)
+        if value is not None:
+            text = str(_scalar(value)).strip()
+            if text:
+                return text
+    return fallback
+
+
+def _extract_task_id(sample: Dict[str, Any], *, fallback: str) -> str:
+    for key in ("task", "task_id", "episode.task"):
+        value = sample.get(key)
+        if value is not None:
+            text = str(_scalar(value)).strip()
+            if text:
+                return text.replace(" ", "_")
+    return fallback
+
+
+def _optional_float(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    return float(_scalar(value))
+
+
+def _optional_int(value: Any) -> Optional[int]:
+    if value is None:
+        return None
+    return int(_scalar(value))
+
+
+def _scalar(value: Any) -> Any:
+    if hasattr(value, "item"):
+        try:
+            return value.item()
+        except ValueError:
+            return value
+    return value
 
 
 def _load_simple_yaml(path: Union[str, Path]) -> Dict[str, Any]:
@@ -150,4 +338,3 @@ def _parse_scalar(value: str) -> Any:
     except ValueError:
         pass
     return value.strip("\"'")
-
