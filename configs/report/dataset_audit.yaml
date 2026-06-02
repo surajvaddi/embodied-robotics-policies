@@ -1,0 +1,12 @@
+report_type: dataset_audit
+title: Embodied World Policy Lab Dataset Audit
+dataset: data/canonical/lerobot_pusht_small
+statistics_out: artifacts/reports/dataset_audit_statistics.json
+figures_dir: reports/figures
+tables_dir: reports/tables
+out: reports/dataset_audit.tex
+known_limitations:
+  - Current real online samples are tiny smoke-scale subsets.
+  - LIBERO and RoboCasa simulator integrations still use smoke backends.
+  - Large RoboCasa365 composite datasets require explicit indexed download approval.
+
