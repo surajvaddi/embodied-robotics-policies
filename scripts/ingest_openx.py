@@ -72,10 +72,10 @@ def main() -> None:
                     raise
                 print(f"Streaming read failed, falling back to indexed access: {exc}")
                 samples = []
-            if not samples and config.streaming:
+            if config.streaming and len(samples) < steps:
                 if source_family == "robocasa" and not args.allow_indexed_download:
                     raise RuntimeError(
-                        "RoboCasa streaming produced no samples or failed. "
+                        "RoboCasa streaming produced too few samples or failed. "
                         "Pass --allow_indexed_download to permit local indexed cache downloads."
                     )
                 dataset = make_lerobot_dataset(repo_id, streaming=False, revision=config.revision)
