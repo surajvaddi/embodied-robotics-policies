@@ -30,6 +30,7 @@ def main() -> None:
     parser.add_argument("--steps_per_episode", type=int, default=None)
     parser.add_argument("--out", required=True)
     parser.add_argument("--fake_online", action="store_true")
+    parser.add_argument("--allow_indexed_download", action="store_true")
     args = parser.parse_args()
 
     config = load_lerobot_config(args.config)
@@ -57,16 +58,27 @@ def main() -> None:
             raise RuntimeError(
                 "StreamingLeRobotDataset is unavailable. Install LeRobot or rerun with --fake_online."
             )
-        dataset = make_lerobot_dataset(repo_id, streaming=config.streaming)
+        dataset = make_lerobot_dataset(repo_id, streaming=config.streaming, revision=config.revision)
         episodes = []
         for episode_idx in range(args.limit_episodes):
-            samples = collect_episode_samples(
-                dataset,
-                limit_steps=steps,
-                episode_index=episode_idx,
-            )
+            try:
+                samples = collect_episode_samples(
+                    dataset,
+                    limit_steps=steps,
+                    episode_index=episode_idx,
+                )
+            except Exception as exc:
+                if not config.streaming:
+                    raise
+                print(f"Streaming read failed, falling back to indexed access: {exc}")
+                samples = []
             if not samples and config.streaming:
-                dataset = make_lerobot_dataset(repo_id, streaming=False)
+                if source_family == "robocasa" and not args.allow_indexed_download:
+                    raise RuntimeError(
+                        "RoboCasa streaming produced no samples or failed. "
+                        "Pass --allow_indexed_download to permit local indexed cache downloads."
+                    )
+                dataset = make_lerobot_dataset(repo_id, streaming=False, revision=config.revision)
                 samples = collect_episode_samples(
                     dataset,
                     limit_steps=steps,

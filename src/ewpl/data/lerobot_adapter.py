@@ -28,6 +28,7 @@ class LeRobotConfig:
     seed: int
     default_repo_id: str
     robocasa_repo_id: str
+    revision: Optional[str]
     max_streamed_steps_per_episode: int
     action_convention: str
     task_id: str
@@ -56,6 +57,7 @@ def load_lerobot_config(path: Union[str, Path]) -> LeRobotConfig:
         seed=int(payload.get("seed", 0)),
         default_repo_id=str(payload.get("default_repo_id", "lerobot/pusht")),
         robocasa_repo_id=str(payload.get("robocasa_repo_id", "pepijn223/robocasa_CloseFridge")),
+        revision=payload.get("revision"),
         max_streamed_steps_per_episode=int(payload.get("max_streamed_steps_per_episode", 32)),
         action_convention=str(payload.get("action_convention", "lerobot_continuous")),
         task_id=str(payload.get("task_id", "online_lerobot_sample")),
@@ -86,19 +88,20 @@ def make_lerobot_dataset(
     *,
     streaming: bool = True,
     root: Optional[Union[str, Path]] = None,
+    revision: Optional[str] = None,
 ) -> Any:
     """Create a LeRobot dataset object using optional runtime imports."""
 
     if streaming:
         module = importlib.import_module("lerobot.datasets.streaming_dataset")
         dataset_cls = getattr(module, "StreamingLeRobotDataset")
-        return dataset_cls(repo_id)
+        return dataset_cls(repo_id, revision=revision)
 
     module = importlib.import_module("lerobot.datasets.lerobot_dataset")
     dataset_cls = getattr(module, "LeRobotDataset")
     if root is None:
-        return dataset_cls(repo_id)
-    return dataset_cls(repo_id, root=root)
+        return dataset_cls(repo_id, revision=revision)
+    return dataset_cls(repo_id, root=root, revision=revision)
 
 
 def configured_repo_id(config: LeRobotConfig, *, source_family: str = "lerobot") -> str:

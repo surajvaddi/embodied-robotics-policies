@@ -18,6 +18,7 @@ def test_lerobot_config_loads_online_repos() -> None:
     assert config.streaming is True
     assert config.default_repo_id == "lerobot/pusht"
     assert config.robocasa_repo_id == "pepijn223/robocasa_CloseFridge"
+    assert config.revision == "main"
     assert configured_repo_id(config) == "lerobot/pusht"
     assert configured_repo_id(config, source_family="robocasa") == "pepijn223/robocasa_CloseFridge"
 

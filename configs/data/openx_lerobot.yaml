@@ -4,6 +4,7 @@ streaming: true
 seed: 29
 default_repo_id: lerobot/pusht
 robocasa_repo_id: pepijn223/robocasa_CloseFridge
+revision: main
 max_streamed_steps_per_episode: 32
 action_convention: lerobot_continuous
 task_id: online_lerobot_sample
@@ -19,4 +20,3 @@ state_keys:
   - state
 action_keys:
   - action
-
