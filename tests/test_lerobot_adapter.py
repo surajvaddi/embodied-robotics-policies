@@ -6,6 +6,7 @@ from ewpl.data.lerobot_adapter import (
     load_lerobot_config,
     samples_to_episode,
     sample_to_step,
+    make_fake_online_samples,
 )
 
 
@@ -103,3 +104,13 @@ def test_collect_episode_samples_bounds_iterator() -> None:
     samples = collect_episode_samples(dataset, limit_steps=8)
 
     assert [sample["frame_index"] for sample in samples] == [0, 1]
+
+
+def test_fake_online_samples_match_lerobot_keys() -> None:
+    samples = make_fake_online_samples(steps=4, episode_index=3)
+
+    assert len(samples) == 4
+    assert samples[0]["observation.image"].shape == (32, 32, 3)
+    assert samples[0]["episode_index"] == 3
+    assert "observation.state" in samples[0]
+    assert "action" in samples[0]

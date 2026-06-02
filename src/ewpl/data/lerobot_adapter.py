@@ -8,6 +8,7 @@ the rest of the project can still import this module and run smoke tests.
 from __future__ import annotations
 
 import importlib
+import importlib.util
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Union
@@ -228,6 +229,29 @@ def collect_episode_samples(
         if len(collected) >= limit_steps:
             break
     return collected
+
+
+def make_fake_online_samples(*, steps: int, image_size: int = 32, episode_index: int = 0) -> List[Dict[str, Any]]:
+    """Create Hub-shaped samples for offline tests of the online ingestion path."""
+
+    samples: List[Dict[str, Any]] = []
+    for t in range(steps):
+        image = np.zeros((image_size, image_size, 3), dtype=np.uint8)
+        image[:, :] = np.array([32, 36, 44], dtype=np.uint8)
+        block_x = min(image_size - 8, 4 + t * 2)
+        image[10:18, block_x : block_x + 8] = np.array([220, 80, 40], dtype=np.uint8)
+        samples.append(
+            {
+                "observation.image": image,
+                "observation.state": np.linspace(0.0, 1.0, num=6, dtype=np.float32) + t,
+                "action": np.linspace(-0.1, 0.1, num=4, dtype=np.float32),
+                "task": "online fake LeRobot sample",
+                "episode_index": episode_index,
+                "frame_index": t,
+                "timestamp": float(t),
+            }
+        )
+    return samples
 
 
 def _module_has_class(module_name: str, class_name: str) -> bool:
