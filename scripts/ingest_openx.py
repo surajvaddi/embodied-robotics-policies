@@ -65,6 +65,13 @@ def main() -> None:
                 limit_steps=steps,
                 episode_index=episode_idx,
             )
+            if not samples and config.streaming:
+                dataset = make_lerobot_dataset(repo_id, streaming=False)
+                samples = collect_episode_samples(
+                    dataset,
+                    limit_steps=steps,
+                    episode_index=episode_idx,
+                )
             if not samples:
                 break
             episodes.append(
