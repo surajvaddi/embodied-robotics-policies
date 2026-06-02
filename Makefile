@@ -1,4 +1,4 @@
-.PHONY: test smoke-data smoke-grid libero-dry-run libero-convert-smoke libero-grid robocasa-dry-run robocasa-convert-smoke robocasa-rollout-smoke lerobot-ingest-fake lerobot-ingest-real robocasa-hf-ingest-real openx-validate lerobot-validate-real robocasa-hf-validate-real
+.PHONY: test smoke-data smoke-grid libero-dry-run libero-convert-smoke libero-grid robocasa-dry-run robocasa-convert-smoke robocasa-rollout-smoke lerobot-ingest-fake lerobot-ingest-real robocasa-hf-ingest-real openx-validate lerobot-validate-real robocasa-hf-validate-real lerobot-grid-real robocasa-hf-grid-real
 
 test:
 	pytest
@@ -44,3 +44,9 @@ lerobot-validate-real:
 
 robocasa-hf-validate-real:
 	python3 -m ewpl.data.validation --dataset data/canonical/robocasa_hf_small --out artifacts/reports/robocasa_hf_validation.json
+
+lerobot-grid-real:
+	python3 scripts/make_demo_grid.py --dataset data/canonical/lerobot_pusht_small --out artifacts/plots/lerobot_pusht_grid.png
+
+robocasa-hf-grid-real:
+	python3 scripts/make_demo_grid.py --dataset data/canonical/robocasa_hf_small --out artifacts/plots/robocasa_hf_grid.png
