@@ -1,0 +1,13 @@
+seed: 17
+split_type: iid
+train_fraction: 0.7
+val_fraction: 0.15
+test_fraction: 0.15
+task_holdout_fraction: 0.25
+source_transfer_train_sources:
+  - lerobot
+  - openx
+source_transfer_test_sources:
+  - libero
+  - robocasa
+
