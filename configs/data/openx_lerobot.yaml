@@ -1,0 +1,22 @@
+source: lerobot
+backend: huggingface
+streaming: true
+seed: 29
+default_repo_id: lerobot/pusht
+robocasa_repo_id: pepijn223/robocasa_CloseFridge
+max_streamed_steps_per_episode: 32
+action_convention: lerobot_continuous
+task_id: online_lerobot_sample
+instruction: online LeRobot demonstration
+image_keys:
+  - observation.image
+  - observation.images.image
+  - observation.images.camera1
+  - observation.images.robot0_agentview_left
+state_keys:
+  - observation.state
+  - observation.proprio
+  - state
+action_keys:
+  - action
+
