@@ -129,11 +129,18 @@ def _save_checkpoint(
                 "hidden_dim": config.hidden_dim,
                 "action_convention": config.action_convention,
             },
-            "training_config": asdict(config),
+            "training_config": _serializable_config(config),
             "losses": losses,
         },
         path,
     )
+
+
+def _serializable_config(config: BCTrainingConfig) -> dict:
+    payload = asdict(config)
+    payload["dataset_root"] = str(payload["dataset_root"])
+    payload["output_dir"] = str(payload["output_dir"])
+    return payload
 
 
 __all__ = ["BCTrainingConfig", "TrainingResult", "train_bc"]

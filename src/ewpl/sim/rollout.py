@@ -159,3 +159,30 @@ def run_random_rollouts(
     )
     policy = RandomPolicy(seed=seed, scale=action_scale)
     return run_policy_rollouts(policy=policy, config=config)
+
+
+def run_checkpoint_rollouts(
+    *,
+    checkpoint_path: str,
+    env_name: str,
+    tasks: int,
+    episodes: int,
+    out: str,
+    seed: int = 0,
+    max_steps: int = 12,
+) -> Tuple[Path, List[Dict[str, object]]]:
+    """Run smoke rollouts with a checkpoint-backed behavior cloning policy."""
+
+    from ewpl.training.checkpointing import load_bc_policy
+
+    policy = load_bc_policy(checkpoint_path)
+    config = RolloutConfig(
+        env_name=env_name,
+        tasks=tasks,
+        episodes=episodes,
+        out=out,
+        seed=seed,
+        max_steps=max_steps,
+        policy_name=f"bc:{Path(checkpoint_path).name}",
+    )
+    return run_policy_rollouts(policy=policy, config=config)
