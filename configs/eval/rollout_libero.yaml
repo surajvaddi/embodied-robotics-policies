@@ -1,0 +1,9 @@
+env: libero
+policy: random
+tasks: 2
+episodes: 5
+seed: 0
+max_steps: 12
+action_scale: 0.1
+out: artifacts/rollouts/libero_random
+

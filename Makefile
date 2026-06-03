@@ -1,4 +1,4 @@
-.PHONY: test smoke-data smoke-grid libero-dry-run libero-convert-smoke libero-grid robocasa-dry-run robocasa-convert-smoke robocasa-rollout-smoke lerobot-ingest-fake lerobot-ingest-real robocasa-hf-ingest-real openx-validate lerobot-validate-real robocasa-hf-validate-real lerobot-grid-real robocasa-hf-grid-real
+.PHONY: test smoke-data smoke-grid libero-dry-run libero-convert-smoke libero-grid robocasa-dry-run robocasa-convert-smoke robocasa-rollout-smoke libero-rollout-smoke lerobot-ingest-fake lerobot-ingest-real robocasa-hf-ingest-real openx-validate lerobot-validate-real robocasa-hf-validate-real lerobot-grid-real robocasa-hf-grid-real
 
 test:
 	pytest
@@ -25,7 +25,10 @@ robocasa-convert-smoke:
 	python scripts/convert_to_canonical.py --source robocasa --config configs/data/robocasa.yaml --out data/canonical/robocasa_small --limit_episodes 20
 
 robocasa-rollout-smoke:
-	python scripts/eval_rollouts.py --env robocasa --policy random --tasks 2 --episodes 5 --out artifacts/rollouts/robocasa_random
+	python3 scripts/eval_rollouts.py --config configs/eval/rollout_robocasa.yaml
+
+libero-rollout-smoke:
+	python3 scripts/eval_rollouts.py --config configs/eval/rollout_libero.yaml
 
 lerobot-ingest-fake:
 	python scripts/ingest_openx.py --config configs/data/openx_lerobot.yaml --subset fake --limit_episodes 2 --steps_per_episode 8 --out data/canonical/openx_small --fake_online
