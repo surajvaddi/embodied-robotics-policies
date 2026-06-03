@@ -10,14 +10,15 @@ from typing import Any, Dict
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from ewpl.sim.rollout import run_random_rollouts
+from ewpl.sim.rollout import run_checkpoint_rollouts, run_random_rollouts
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default=None)
     parser.add_argument("--env", default=None, choices=["libero", "robocasa"])
-    parser.add_argument("--policy", default=None, choices=["random"])
+    parser.add_argument("--policy", default=None, choices=["random", "checkpoint"])
+    parser.add_argument("--checkpoint", dest="checkpoint_path", default=None)
     parser.add_argument("--tasks", type=int, default=None)
     parser.add_argument("--episodes", type=int, default=None)
     parser.add_argument("--out", default=None)
@@ -27,15 +28,26 @@ def main() -> None:
     args = parser.parse_args()
     config = _resolve_config(vars(args))
 
-    metrics_path, metrics = run_random_rollouts(
-        env_name=config["env"],
-        tasks=int(config["tasks"]),
-        episodes=int(config["episodes"]),
-        out=config["out"],
-        seed=int(config["seed"]),
-        max_steps=int(config["max_steps"]),
-        action_scale=float(config["action_scale"]),
-    )
+    if config["policy"] == "checkpoint":
+        metrics_path, metrics = run_checkpoint_rollouts(
+            checkpoint_path=config["checkpoint_path"],
+            env_name=config["env"],
+            tasks=int(config["tasks"]),
+            episodes=int(config["episodes"]),
+            out=config["out"],
+            seed=int(config["seed"]),
+            max_steps=int(config["max_steps"]),
+        )
+    else:
+        metrics_path, metrics = run_random_rollouts(
+            env_name=config["env"],
+            tasks=int(config["tasks"]),
+            episodes=int(config["episodes"]),
+            out=config["out"],
+            seed=int(config["seed"]),
+            max_steps=int(config["max_steps"]),
+            action_scale=float(config["action_scale"]),
+        )
     success_rate = sum(1 for row in metrics if row["success"]) / len(metrics)
 
     print(f"rollout_metrics.csv: {metrics_path}")
@@ -59,6 +71,7 @@ def _resolve_config(args: Dict[str, Any]) -> Dict[str, Any]:
         "seed": 0,
         "max_steps": 12,
         "action_scale": 0.1,
+        "checkpoint_path": None,
         "out": None,
     }
     for key, value in defaults.items():
@@ -68,8 +81,8 @@ def _resolve_config(args: Dict[str, Any]) -> Dict[str, Any]:
         raise ValueError("--env or config env is required")
     if config["out"] is None:
         raise ValueError("--out or config out is required")
-    if config["policy"] != "random":
-        raise ValueError(f"unsupported policy: {config['policy']}")
+    if config["policy"] == "checkpoint" and not config["checkpoint_path"]:
+        raise ValueError("--checkpoint or config checkpoint_path is required for checkpoint policy")
     return config
 
 

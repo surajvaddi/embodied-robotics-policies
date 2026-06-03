@@ -1,0 +1,11 @@
+dataset_root: data/smoke
+output_dir: artifacts/training/bc_libero_smoke
+max_steps: 20
+batch_size: 8
+learning_rate: 0.001
+seed: 0
+image_size: 32
+language_length: 16
+vocab_size: 4096
+hidden_dim: 64
+action_convention: delta_ee_pose_gripper

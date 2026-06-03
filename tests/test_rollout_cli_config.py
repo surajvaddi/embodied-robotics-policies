@@ -21,3 +21,33 @@ def test_rollout_cli_args_override_config() -> None:
     assert config["episodes"] == 2
     assert config["out"] == "custom/out"
 
+
+def test_rollout_cli_checkpoint_policy_requires_path() -> None:
+    try:
+        _resolve_config(
+            {
+                "config": None,
+                "env": "libero",
+                "policy": "checkpoint",
+                "out": "artifacts/rollouts/tmp",
+            }
+        )
+    except ValueError as exc:
+        assert "checkpoint" in str(exc)
+    else:
+        raise AssertionError("checkpoint policy should require a checkpoint path")
+
+
+def test_rollout_cli_checkpoint_policy_loads_path() -> None:
+    config = _resolve_config(
+        {
+            "config": None,
+            "env": "libero",
+            "policy": "checkpoint",
+            "checkpoint_path": "artifacts/training/bc/latest.pt",
+            "out": "artifacts/rollouts/tmp",
+        }
+    )
+
+    assert config["policy"] == "checkpoint"
+    assert config["checkpoint_path"] == "artifacts/training/bc/latest.pt"
