@@ -1,4 +1,5 @@
 import json
+import csv
 import subprocess
 import sys
 
@@ -92,3 +93,8 @@ def test_libero_random_rollout_smoke(tmp_path) -> None:
     assert metrics_path.exists()
     assert len(metrics) == 2
     assert (tmp_path / "rollouts" / "videos" / "episode_00000" / "000000.png").exists()
+    assert (tmp_path / "rollouts" / "per_step_logs.csv").exists()
+    with (tmp_path / "rollouts" / "per_step_logs.csv").open(encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows
+    assert rows[0]["env"] == "libero"

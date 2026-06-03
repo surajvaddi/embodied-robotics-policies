@@ -100,6 +100,7 @@ def test_robocasa_random_rollout_smoke(tmp_path) -> None:
     assert metrics_path.exists()
     assert len(metrics) == 3
     assert (tmp_path / "rollouts" / "videos" / "episode_00000" / "000000.png").exists()
+    assert (tmp_path / "rollouts" / "per_step_logs.csv").exists()
 
     with metrics_path.open(encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
@@ -107,6 +108,7 @@ def test_robocasa_random_rollout_smoke(tmp_path) -> None:
     assert set(rows[0]) == {
         "episode",
         "env",
+        "policy",
         "task_id",
         "scene_id",
         "steps",
@@ -114,4 +116,10 @@ def test_robocasa_random_rollout_smoke(tmp_path) -> None:
         "total_reward",
         "done",
         "mean_action_norm",
+        "mean_policy_latency_ms",
+        "termination_reason",
     }
+    with (tmp_path / "rollouts" / "per_step_logs.csv").open(encoding="utf-8") as handle:
+        step_rows = list(csv.DictReader(handle))
+    assert step_rows
+    assert "policy_latency_ms" in step_rows[0]
