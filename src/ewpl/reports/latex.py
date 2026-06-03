@@ -31,7 +31,7 @@ def render_dataset_audit_tex(
             f"Sources: {_escape(str(stats.get('sources', {})))}\\\\",
             f"Tasks: {_escape(str(stats.get('tasks', {})))}",
             "\\section{Summary Table}",
-            "\\input{" + _escape(table_paths["summary_tex"]) + "}",
+            "\\input{" + _path(table_paths["summary_tex"]) + "}",
             "\\section{Distributions}",
             _figure(plot_paths["source_distribution"], "Episodes per source"),
             _figure(plot_paths["task_distribution"], "Episodes per task"),
@@ -58,7 +58,7 @@ def _figure(path: str, caption: str) -> str:
         [
             "\\begin{figure}[h]",
             "\\centering",
-            "\\includegraphics[width=0.85\\linewidth]{" + _escape(path) + "}",
+            "\\includegraphics[width=0.85\\linewidth]{" + _path(path) + "}",
             "\\caption{" + _escape(caption) + "}",
             "\\end{figure}",
         ]
@@ -74,3 +74,6 @@ def _escape(value: str) -> str:
         .replace("#", "\\#")
     )
 
+
+def _path(value: str) -> str:
+    return "\\detokenize{" + value + "}"
