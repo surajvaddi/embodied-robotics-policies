@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -92,6 +93,7 @@ def run_policy_rollouts(
                     "reward": result.reward,
                     "done": result.done,
                     "success": result.success,
+                    "action_vector": json.dumps(action.vector.tolist()),
                     "action_norm": action_norm,
                     "policy_latency_ms": latency_ms,
                     "termination_reason": "success" if result.success else ("done" if result.done else ""),
